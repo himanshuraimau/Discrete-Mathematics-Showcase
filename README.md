@@ -31,7 +31,7 @@ An interactive web application demonstrating key concepts from discrete mathemat
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/discrete-math-showcase.git
+git clone https://github.com/himanshuraimau/discrete-math-showcase.git
 cd discrete-math-showcase
 ```
 
