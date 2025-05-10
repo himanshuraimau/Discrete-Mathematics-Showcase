@@ -3,6 +3,7 @@ import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/comp
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { ArrowRight, Database, FileCode, Network, Shield, Share2 } from "lucide-react"
+import path from "path"
 
 export default function Home() {
   const applications = [
@@ -40,7 +41,7 @@ export default function Home() {
       concepts: ["Partial Order Relations", "Posets", "Hasse Diagrams"],
       icon: <FileCode className="h-8 w-8" />,
       path: "/compiler",
-    },
+    }
   ]
 
   return (

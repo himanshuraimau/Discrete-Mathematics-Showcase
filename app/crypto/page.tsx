@@ -125,7 +125,7 @@ function AnimatedArrow({
       arrowRef.current.scale.set(scale, 1, scale)
 
       // Glow effect
-      const material = arrowRef.current.children[0].material as THREE.MeshStandardMaterial
+      const material = (arrowRef.current.children[0] as THREE.Mesh).material as THREE.MeshStandardMaterial
       if (material) {
         material.emissiveIntensity = 0.5 + 0.3 * Math.sin(progress.current * Math.PI * 10)
       }
