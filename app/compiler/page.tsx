@@ -1,193 +1,21 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
-// Remove the PageLayout import if it doesn't exist
-// import { PageLayout } from "@/components/page-layout"
-// Instead, let's use standard layout components
+import { useState } from "react"
+import { PageLayout } from "@/components/page-layout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Canvas, useFrame } from "@react-three/fiber"
-import { OrbitControls, Text, useGLTF, Environment, Float, Sparkles, Billboard, useTexture } from "@react-three/drei"
+import { Canvas } from "@react-three/fiber"
+import { OrbitControls, Text } from "@react-three/drei"
 import { Plus, RefreshCw, Trash2 } from "lucide-react"
-import * as THREE from "three"
 
 // Define instruction type
 type Instruction = {
   id: string
   name: string
   dependencies: string[]
-}
-
-// Node component for 3D visualization
-function Node({ position, name, color, level }: { position: [number, number, number], name: string, color: string, level: number }) {
-  const groupRef = useRef<THREE.Group>(null)
-  const glowRef = useRef<THREE.Mesh>(null)
-  const ringRef = useRef<THREE.Mesh>(null)
-
-  // Pulse animation for the glow effect
-  useFrame((state) => {
-    if (glowRef.current) {
-      glowRef.current.scale.setScalar(1 + Math.sin(state.clock.elapsedTime * 1.5) * 0.1)
-    }
-    if (ringRef.current) {
-      ringRef.current.rotation.z = state.clock.elapsedTime * 0.3
-      ringRef.current.rotation.x = state.clock.elapsedTime * 0.2
-    }
-  })
-
-  // Hover state for interactive highlighting
-  const [hovered, setHovered] = useState(false)
-  useEffect(() => {
-    document.body.style.cursor = hovered ? 'pointer' : 'auto'
-    return () => { document.body.style.cursor = 'auto' }
-  }, [hovered])
-
-  return (
-    <Float 
-      speed={2} 
-      rotationIntensity={0.2} 
-      floatIntensity={0.3} 
-      position={position}
-    >
-      <group 
-        ref={groupRef}
-        onPointerOver={() => setHovered(true)} 
-        onPointerOut={() => setHovered(false)}
-      >
-        {/* Outer glow */}
-        <mesh ref={glowRef}>
-          <sphereGeometry args={[0.75, 32, 32]} />
-          <meshBasicMaterial 
-            color={color} 
-            transparent 
-            opacity={0.15} 
-            toneMapped={false}
-          />
-        </mesh>
-
-        {/* Decorative ring */}
-        <mesh ref={ringRef} scale={1.1}>
-          <torusGeometry args={[0.6, 0.03, 16, 32]} />
-          <meshStandardMaterial 
-            color={color} 
-            emissive={color} 
-            emissiveIntensity={0.5}
-            metalness={0.9}
-            roughness={0.2}
-          />
-        </mesh>
-        
-        {/* Main sphere with glass-like material */}
-        <mesh castShadow receiveShadow>
-          <sphereGeometry args={[0.55, 64, 64]} />
-          <meshPhysicalMaterial 
-            color={color} 
-            emissive={color} 
-            emissiveIntensity={0.2}
-            metalness={0.2}
-            roughness={0.1}
-            clearcoat={1}
-            clearcoatRoughness={0.1}
-            envMapIntensity={1.5}
-            transmission={0.2}
-            opacity={0.95}
-          />
-        </mesh>
-        
-        {/* Small particles around the node for a dynamic effect */}
-        <Sparkles
-          count={15}
-          scale={[2, 2, 2]}
-          size={0.4}
-          speed={0.3}
-          color={color}
-          opacity={0.7}
-        />
-        
-        {/* Text label with better positioning and styling */}
-        <Billboard
-          follow={true}
-          lockX={false}
-          lockY={false}
-          lockZ={false}
-        >
-          <Text 
-            position={[0, -1.2, 0]} 
-            fontSize={0.4}
-            font="/fonts/Inter-SemiBold.woff"
-            color="white"
-            anchorX="center" 
-            anchorY="middle"
-            outlineWidth={0.05}
-            outlineColor="#000000"
-            outlineOpacity={0.3}
-            overflowWrap="break-word"
-            maxWidth={5}
-          >
-            {name}
-          </Text>
-        </Billboard>
-      </group>
-    </Float>
-  )
-}
-
-// Edge component for connecting nodes
-function Edge({ start, end, color = "#8bbbff" }: { start: [number, number, number], end: [number, number, number], color?: string }) {
-  const ref = useRef<THREE.Mesh>(null)
-  
-  // Calculate direction and position
-  const direction = new THREE.Vector3().subVectors(
-    new THREE.Vector3(...end),
-    new THREE.Vector3(...start)
-  )
-  const center = new THREE.Vector3().addVectors(
-    new THREE.Vector3(...start),
-    direction.clone().multiplyScalar(0.5)
-  )
-  const length = direction.length()
-  
-  // Calculate rotation to align with the direction
-  const quaternion = new THREE.Quaternion()
-  quaternion.setFromUnitVectors(
-    new THREE.Vector3(0, 1, 0),
-    direction.clone().normalize()
-  )
-  
-  useFrame((state) => {
-    if (ref.current) {
-      // Animate the material
-      const material = ref.current.material as THREE.MeshStandardMaterial
-      material.opacity = 0.6 + Math.sin(state.clock.elapsedTime * 2) * 0.2
-      
-      // Pulse effect
-      const scale = 1 + Math.sin(state.clock.elapsedTime * 3) * 0.05
-      ref.current.scale.set(scale, 1, scale)
-    }
-  })
-  
-  return (
-    <mesh 
-      ref={ref}
-      position={center.toArray()}
-      quaternion={quaternion}
-      castShadow
-    >
-      <cylinderGeometry args={[0.035, 0.035, length, 8]} />
-      <meshStandardMaterial 
-        color={color} 
-        transparent
-        opacity={0.8}
-        emissive={color}
-        emissiveIntensity={0.5}
-        metalness={0.9}
-        roughness={0.2}
-      />
-    </mesh>
-  )
 }
 
 // 3D Hasse Diagram Visualization
@@ -237,33 +65,29 @@ function HasseDiagramVisualization({ instructions }: { instructions: Instruction
     instructionsByLevel.get(level)?.push(inst)
   })
 
-  // Assign positions based on levels - more spread out and with a curved layout
+  // Assign positions based on levels - more spread out
   Array.from(instructionsByLevel.entries()).forEach(([level, insts]) => {
-    const levelHeight = (maxLevel - level) * 4 // Vertical spacing
+    const levelHeight = (maxLevel - level) * 4 // Increased vertical spacing
     const width = insts.length
-    const radius = Math.max(width * 1.2, 3) // Radius increases with width
 
     insts.forEach((inst, index) => {
-      // Calculate position in a curved layout
-      const angle = (index / width) * Math.PI + Math.PI / 2
-      const x = Math.cos(angle) * radius
-      const z = Math.sin(angle) * radius * 0.5
+      const x = (index - (width - 1) / 2) * 3.5 // Increased horizontal spacing
       const y = levelHeight
-      
+      const z = 0
+
       positions[inst.id] = [x, y, z]
     })
   })
 
-  // Create an advanced color palette with better contrast
+  // Create a color palette for nodes based on their level
   const getNodeColor = (level: number) => {
     const colors = [
-      "#ff6b6b", // Red
-      "#ff9e64", // Orange
-      "#ffd93d", // Yellow
-      "#6bcb77", // Green
-      "#4d96ff", // Blue
-      "#9b72aa", // Purple
-      "#ff6e96", // Pink
+      "#8b5cf6", // Violet
+      "#6366f1", // Indigo
+      "#3b82f6", // Blue
+      "#0ea5e9", // Light Blue
+      "#06b6d4", // Cyan
+      "#14b8a6", // Teal
     ]
     return colors[level % colors.length]
   }
@@ -271,76 +95,53 @@ function HasseDiagramVisualization({ instructions }: { instructions: Instruction
   return (
     <Canvas 
       camera={{ position: [0, maxLevel * 2, maxLevel * 6], fov: 45 }}
-      dpr={[1, 2]} // Improve rendering quality
-      gl={{ 
-        antialias: true,
-        alpha: true,
-        toneMapping: THREE.ACESFilmicToneMapping,
-        toneMappingExposure: 1.2
-      }}
+      style={{ background: "linear-gradient(to bottom, #111827, #1e293b)" }}
       shadows
     >
-      {/* Enhanced environment and lighting */}
-      <color attach="background" args={["#050816"]} />
-      <fog attach="fog" args={['#070b2e', 10, 50]} />
-      
-      {/* Add an environment map for realistic reflections */}
-      <Environment preset="city" />
-      
-      {/* Create dynamic lighting */}
-      <ambientLight intensity={0.3} />
-      <spotLight 
-        position={[10, 15, 10]} 
-        angle={0.3} 
-        penumbra={1} 
-        intensity={2} 
-        castShadow 
-        shadow-mapSize={[2048, 2048]}
-      />
-      <pointLight position={[-10, -10, -10]} intensity={0.5} color="#3b82f6" />
-      
-      {/* Add global particles for atmosphere */}
-      <Sparkles 
-        count={200} 
-        scale={[30, 20, 30]} 
-        size={1} 
-        speed={0.3} 
-        opacity={0.2}
-      />
-      
-      {/* Background elements */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2, 0]} receiveShadow>
-        <planeGeometry args={[100, 100]} />
-        <meshStandardMaterial 
-          color="#0a0a20" 
-          metalness={0.9}
-          roughness={0.5}
-        />
-      </mesh>
-      
-      {/* Draw edges (dependencies) with enhanced styling */}
+      <fog attach="fog" args={['#1e293b', 10, 50]} />
+      <ambientLight intensity={0.5} />
+      <pointLight position={[10, 10, 10]} intensity={1.5} castShadow />
+      <pointLight position={[-10, -10, -10]} intensity={0.5} />
+
+      {/* Draw edges (dependencies) */}
       {instructions.map((inst) =>
         inst.dependencies.map((depId) => {
           if (positions[inst.id] && positions[depId]) {
-            const startPos = positions[depId] // From dependency
-            const endPos = positions[inst.id] // To instruction
-            const level = levels.get(inst.id) || 0
-            const color = getNodeColor(level)
-            
+            const [x1, y1, z1] = positions[inst.id]
+            const [x2, y2, z2] = positions[depId]
+
+            // Calculate the midpoint
+            const midX = (x1 + x2) / 2
+            const midY = (y1 + y2) / 2
+            const midZ = (z1 + z2) / 2
+
+            // Calculate the distance
+            const distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2) + Math.pow(z2 - z1, 2))
+
+            // Calculate the rotation
+            const rotX = Math.atan2(y2 - y1, Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(z2 - z1, 2)))
+            const rotZ = Math.atan2(x2 - x1, z2 - z1)
+
             return (
-              <Edge 
-                key={`${inst.id}-${depId}`} 
-                start={startPos} 
-                end={endPos} 
-                color={color}
-              />
+              <group key={`${inst.id}-${depId}`}>
+                <mesh position={[midX, midY, midZ]} rotation={[rotX, 0, rotZ]} castShadow receiveShadow>
+                  <cylinderGeometry args={[0.08, 0.08, distance, 12]} />
+                  <meshStandardMaterial 
+                    color="#94a3b8" 
+                    emissive="#475569"
+                    emissiveIntensity={0.2}
+                    metalness={0.8}
+                    roughness={0.2}
+                  />
+                </mesh>
+              </group>
             )
           }
           return null
         }),
       )}
 
-      {/* Draw nodes (instructions) with enhanced styling */}
+      {/* Draw nodes (instructions) */}
       {instructions.map((inst) => {
         const pos = positions[inst.id]
         if (!pos) return null
@@ -348,32 +149,52 @@ function HasseDiagramVisualization({ instructions }: { instructions: Instruction
         const color = getNodeColor(level)
 
         return (
-          <Node 
-            key={inst.id} 
-            position={pos} 
-            name={inst.name} 
-            color={color} 
-            level={level}
-          />
+          <group key={inst.id} position={pos}>
+            {/* Glow effect */}
+            <mesh>
+              <sphereGeometry args={[0.7, 16, 16]} />
+              <meshBasicMaterial color={color} transparent opacity={0.15} />
+            </mesh>
+            
+            {/* Main sphere */}
+            <mesh castShadow receiveShadow>
+              <sphereGeometry args={[0.6, 32, 32]} />
+              <meshStandardMaterial 
+                color={color} 
+                emissive={color}
+                emissiveIntensity={0.3}
+                metalness={0.7}
+                roughness={0.2}
+              />
+            </mesh>
+            
+            {/* Text label */}
+            <Text 
+              position={[0, -1.0, 0]} 
+              fontSize={0.45} 
+              color="white"
+              anchorX="center" 
+              anchorY="middle"
+              outlineWidth={0.02}
+              outlineColor="#1e293b"
+            >
+              {inst.name}
+            </Text>
+          </group>
         )
       })}
 
-      {/* Enhanced orbit controls */}
       <OrbitControls 
         minDistance={3}
-        maxDistance={maxLevel * 10}
+        maxDistance={maxLevel * 8}
         enableDamping
         dampingFactor={0.05}
-        rotateSpeed={0.5}
-        zoomSpeed={0.8}
-        autoRotate
-        autoRotateSpeed={0.5}
       />
       
       {/* Add subtle grid for better depth perception */}
       <gridHelper 
-        args={[100, 100, "#1e3a8a", "#0f172a"]} 
-        position={[0, -1.9, 0]} 
+        args={[50, 50, "#64748b", "#334155"]} 
+        position={[0, -2, 0]} 
         rotation={[Math.PI / 2, 0, 0]} 
       />
     </Canvas>
@@ -511,21 +332,11 @@ export default function CompilerPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Instruction Dependency Visualizer</h1>
-        <p className="text-muted-foreground">
-          Visualize task dependencies as partially ordered sets with Hasse diagrams.
-        </p>
-        <div className="flex flex-wrap gap-2 mt-2">
-          {["Partial Order Relations", "Posets", "Hasse Diagrams", "Topological Sorting"].map((concept) => (
-            <span key={concept} className="px-2.5 py-0.5 rounded-full text-xs bg-primary/10 text-primary">
-              {concept}
-            </span>
-          ))}
-        </div>
-      </div>
-
+    <PageLayout
+      title="Instruction Dependency Visualizer"
+      description="Visualize task dependencies as partially ordered sets with Hasse diagrams."
+      concepts={["Partial Order Relations", "Posets", "Hasse Diagrams", "Topological Sorting"]}
+    >
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-6">
           <TabsTrigger value="diagram">Hasse Diagram</TabsTrigger>
@@ -809,6 +620,6 @@ export default function CompilerPage() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </PageLayout>
   )
 }
